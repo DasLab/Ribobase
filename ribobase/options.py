@@ -1,10 +1,11 @@
 class OptionType(object):
     NUMBER = 0
     STRING = 1
-    BOOl   = 2
+    BOOL   = 2
 
 class OptionException(Exception):
     pass
+
 
 class Option(object):
     """
@@ -31,7 +32,10 @@ class Option(object):
     __slots__ = ["__name", "__value", "__otype"]
 
     def __init__(self, value, otype):
-        self.__value, self.__otype = value, otype
+        self.__otype =  otype
+        #explicitily calling @value.setter to make sure value is of correct
+        #type
+        self.value = value
 
     @property
     def value(self):
@@ -39,15 +43,18 @@ class Option(object):
 
     @value.setter
     def value(self, new_value):
+
         if self.__otype == OptionType.NUMBER and \
-           not isinstance(new_value, int) or  \
-           not isinstance(new_value, float):
+           not (isinstance(new_value, int) or isinstance(new_value, float)):
             raise OptionException("attemped to set value to incorrect type")
 
-        if self.__otype == OptionType.BOOl and \
-           not isinstance(new_value, bool) and \
-           new_value != 0 and new_value != 1 and \
-           new_value != '0' and new_value != '1':
+        #True and False are counted as ints for some reason
+        if self.__otype == OptionType.NUMBER and \
+           (new_value == True or new_value == False):
+            raise OptionException("attemped to set value to incorrect type")
+
+        if self.__otype == OptionType.BOOL and \
+           not isinstance(new_value, bool):
             raise OptionException("attemped to set value to incorrect type")
 
         if self.__otype == OptionType.STRING and \
@@ -55,7 +62,6 @@ class Option(object):
             raise OptionException("attemped to set value to incorrect type")
 
         self.__value = new_value
-
 
 
 class Options(object):
@@ -68,8 +74,11 @@ class Options(object):
     `options` : Dict of Option objects
         stores all the current options
     """
+
+    __slots__ = ["__options"]
+
     def __init__(self, options={}):
-        self.options = {}
+        self.__options = {}
         self.dict_add(options)
 
     def __repr__(self):
@@ -84,32 +93,39 @@ class Options(object):
             self.set(k, v)
 
     def add(self, name, value):
-        if name in self.options:
-            raise ValueError("cannot add option "+ name +", already exists")
-        otype = type(value)
+        if name in self.__options:
+            raise OptionException("cannot add option "+ name +", already exists")
 
-        self.options[name] = Option(value, otype)
+        otype = None
+        if isinstance(value, int) or isinstance(value, float):
+            otype = OptionType.NUMBER
+        if isinstance(value, str):
+            otype = OptionType.STRING
+        if isinstance(value, bool):
+            otype = OptionType.BOOL
 
-    def set(self, name, value):
-        if name not in self.options:
-            raise ValueError("cannot set option "+ name +", does not exists")
-        option = self.options[name]
+        if otype is None:
+            raise OptionException("not a valid option value")
 
-        if option.otype != type(value) :
-            raise ValueError("cannot set option "+ str(name) +", it is typed " +
-                             "as an " + str(option.otype) + ", but was " +
-                             "supplied " + str(type(value)))
-
-        self.options[name].value = value
-
-    def get(self, name):
-        if name not in self.options:
-            raise ValueError("cannot get option "+ name +", it does not exist")
-
-        return self.options[name].value
+        self.__options[name] = Option(value, otype)
 
     def valid_options(self):
-        return self.options.keys()
+        return self.__options.keys()
 
     def __contains__(self, name):
-        return name in self.options
+        return name in self.__options
+
+    def __getitem__(self, name):
+        if name not in self.__options:
+            raise OptionException("cannot get option "+ name + ", it does not exist")
+
+        return self.__options[name].value
+
+    def __setitem__(self, name, value):
+        if name not in self:
+            raise OptionException("cannot set option "+ name +", does not exists")
+
+        self.__options[name].value = value
+
+    def __iter__(self):
+        return self.__options.iteritems()

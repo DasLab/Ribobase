@@ -19,7 +19,8 @@ class WrapperUnittests(unittest.TestCase):
         program_path = os.environ.get('RNAMAKE') + \
                        "/rnamake/lib/RNAMake/cmake/build/simulate_tectos"
         w = wrapper.Wrapper(program_path)
-
+        w.add_cmd_option("cseq", "")
+        w.get_command()
 
 
 
